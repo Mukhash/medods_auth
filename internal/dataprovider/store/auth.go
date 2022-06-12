@@ -1,13 +1,19 @@
 package store
 
-import "context"
+import (
+	"context"
+
+	"github.com/Mukhash/medods_auth/pkg/database/mongodb"
+)
 
 type Store struct {
-	Ctx context.Context
+	Ctx    context.Context
+	Client *mongodb.Client
 }
 
-func NewStore(ctx context.Context) *Store {
+func NewStore(ctx context.Context, client *mongodb.Client) *Store {
 	return &Store{
-		Ctx: ctx,
+		Ctx:    ctx,
+		Client: client,
 	}
 }
