@@ -6,6 +6,6 @@ type Token struct {
 }
 
 type User struct {
-	UUID         string `bson:"_id"`
+	UUID         string `bson:"uuid"`
 	RefreshToken string `bson:"refresh_token"`
 }

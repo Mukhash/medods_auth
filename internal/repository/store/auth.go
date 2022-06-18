@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Mukhash/medods_auth/internal/models"
 	"github.com/Mukhash/medods_auth/pkg/database/mongodb"
@@ -22,8 +23,8 @@ func NewStore(ctx context.Context, client *mongodb.Client) *Store {
 	}
 }
 
-// FindUser if no user is found mongo.ErrNoDocements if thrown.
-func (s *Store) FindUser(uuid string) (*models.User, error) {
+// FindSession if no user is found mongo.ErrNoDocements if thrown.
+func (s *Store) FindSession(uuid string) (*models.User, error) {
 	user := &models.User{}
 	usersCollection := s.Client.DB.Collection("users")
 
@@ -40,10 +41,11 @@ func (s *Store) FindUser(uuid string) (*models.User, error) {
 	return user, nil
 }
 
-func (s *Store) CreateUser(user *models.User) error {
+func (s *Store) InsertSession(user *models.User) error {
 	usersCollection := s.Client.DB.Collection("users")
 
-	hashedToken, err := bcrypt.GenerateFromPassword([]byte(user.RefreshToken), 0)
+	hashedToken, err := bcrypt.GenerateFromPassword([]byte(user.RefreshToken), bcrypt.DefaultCost)
+	fmt.Println(string(hashedToken))
 	if err != nil {
 		return err
 	}

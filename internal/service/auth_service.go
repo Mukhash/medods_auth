@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/Mukhash/medods_auth/internal/repository"
 	"github.com/golang-jwt/jwt"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type authService struct {
@@ -21,17 +23,18 @@ func New(repo repository.Repository, cfg *config.Config, logger *zap.Logger) *au
 	return &authService{repo: repo, cfg: cfg, logger: logger}
 }
 
-func (a *authService) Auth(payload string) (*models.Token, error) {
+func (a *authService) CreateSession(payload string) (*models.Token, error) {
 	user := &models.User{}
 	var err error
 
 	aToken := jwt.NewWithClaims(jwt.SigningMethodHS512, models.Claims{
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: jwt.TimeFunc().Local().Unix() + a.cfg.API.TokenTTL,
+			ExpiresAt: jwt.TimeFunc().Local().Unix() + a.cfg.API.AccessTokenTTL,
 			IssuedAt:  jwt.TimeFunc().Local().Unix(),
 		},
 		UUID: payload,
 	})
+
 	rToken := jwt.NewWithClaims(jwt.SigningMethodHS512, models.Claims{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: jwt.TimeFunc().Unix() + a.cfg.API.RefreshTokenTTL,
@@ -47,7 +50,7 @@ func (a *authService) Auth(payload string) (*models.Token, error) {
 		return nil, err
 	}
 
-	tokens.Refresh, err = rToken.SignedString([]byte(a.cfg.JWT.AccessSecret))
+	tokens.Refresh, err = rToken.SignedString([]byte(a.cfg.JWT.RefreshSecret))
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +58,7 @@ func (a *authService) Auth(payload string) (*models.Token, error) {
 	user.RefreshToken = tokens.Refresh
 	user.UUID = payload
 
-	if err = a.repo.InsertRefresh(user); err != nil {
+	if err = a.repo.InsertSession(user); err != nil {
 		return nil, err
 	}
 
@@ -63,20 +66,41 @@ func (a *authService) Auth(payload string) (*models.Token, error) {
 }
 
 func (a *authService) Refresh(refreshToken string) (string, error) {
-	claims, err := parseToken(refreshToken, []byte(a.cfg.JWT.RefreshSecret))
+	asciiToken := base64.StdEncoding.EncodeToString([]byte(refreshToken))
+	fmt.Println(asciiToken)
+	claims, err := parseToken(asciiToken, []byte(a.cfg.JWT.RefreshSecret))
+	if err != nil {
+		return "", errors.New(err.Error() + " parseToken")
+	}
+
+	user, err := a.repo.FindSession(claims.UUID)
 	if err != nil {
 		return "", err
 	}
 
-	aToken := jwt.NewWithClaims(jwt.SigningMethodHS512, models.Claims{
+	asciiRefresh := base64.StdEncoding.EncodeToString([]byte(user.RefreshToken))
+	if err = bcrypt.CompareHashAndPassword([]byte(asciiRefresh), []byte(refreshToken)); err != nil {
+		return "", err
+	}
+
+	if err = claims.Valid(); err != nil {
+		return "", err
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, models.Claims{
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: jwt.TimeFunc().Local().Unix() + a.cfg.API.TokenTTL,
+			ExpiresAt: jwt.TimeFunc().Local().Unix() + a.cfg.API.AccessTokenTTL,
 			IssuedAt:  jwt.TimeFunc().Local().Unix(),
 		},
 		UUID: claims.UUID,
 	})
 
-	return aToken.Raw, nil
+	accessToken, err := token.SignedString([]byte(a.cfg.JWT.AccessSecret))
+	if err != nil {
+		return "", err
+	}
+
+	return accessToken, nil
 }
 
 func parseToken(mtoken string, signingKey []byte) (*models.Claims, error) {

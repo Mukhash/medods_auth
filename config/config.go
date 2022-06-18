@@ -20,7 +20,7 @@ type API struct {
 	WriteTimeout    time.Duration
 	ShutdownTimeout time.Duration
 	MainPath        string
-	TokenTTL        int64
+	AccessTokenTTL  int64
 	RefreshTokenTTL int64
 	JwtKey          string
 }

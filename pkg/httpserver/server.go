@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Mukhash/medods_auth/config"
-	"github.com/Mukhash/medods_auth/internal/controller/handler"
+	handler "github.com/Mukhash/medods_auth/internal/controller/httphandlers"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"go.uber.org/zap"
@@ -43,8 +43,7 @@ func New(ctx context.Context, config *config.Config, logger *zap.Logger, handler
 
 	e.Use(CORSMiddlewareWrapper)
 	e.Static("/static", "./assets")
-	v2 := e.Group(config.API.MainPath)
-	passRoutes := v2.Group("/auth")
+	passRoutes := e.Group(config.API.MainPath)
 	{
 		passRoutes.POST("/auth", handler.Auth)
 		passRoutes.POST("/refresh", handler.Refresh)
@@ -56,5 +55,7 @@ func New(ctx context.Context, config *config.Config, logger *zap.Logger, handler
 }
 
 func (srv Server) Start() {
-
+	if err := srv.Echo.Start(srv.config.API.Address); err != nil {
+		srv.Logger.Fatal(err)
+	}
 }
