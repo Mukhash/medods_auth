@@ -1,0 +1,11 @@
+version: '3.7'
+
+services:
+  mongodb-medods:
+    image: mongo:latest
+    container_name: mongodb-medods
+    labels:
+      - "keep"
+    ports:
+      - 27017:27017
+    restart: always

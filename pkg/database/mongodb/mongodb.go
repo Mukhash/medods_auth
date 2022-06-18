@@ -11,6 +11,7 @@ import (
 
 type Client struct {
 	*mongo.Client
+	DB     *mongo.Database
 	logger *zap.Logger
 }
 
@@ -27,5 +28,7 @@ func New(cfg *config.Config, logger *zap.Logger) (*Client, error) {
 	}
 	logger.Info("Connected to MongoDB...")
 
-	return &Client{client, logger}, nil
+	authDatabase := client.Database("auth")
+
+	return &Client{client, authDatabase, logger}, nil
 }

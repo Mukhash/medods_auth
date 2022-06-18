@@ -1,10 +1,17 @@
 package config
 
-import "time"
+import (
+	"errors"
+	"log"
+	"time"
+
+	"github.com/ory/viper"
+)
 
 type Config struct {
 	API API
 	DB  DB
+	JWT JWT
 }
 
 type API struct {
@@ -14,7 +21,13 @@ type API struct {
 	ShutdownTimeout time.Duration
 	MainPath        string
 	TokenTTL        int64
+	RefreshTokenTTL int64
 	JwtKey          string
+}
+
+type JWT struct {
+	AccessSecret  string
+	RefreshSecret string
 }
 
 type DB struct {
@@ -24,21 +37,30 @@ type DB struct {
 	MaxIdleConns int
 }
 
-func DefaultConfig() *Config {
-	return &Config{
-		API: API{
-			Address:         ":5000",
-			ReadTimeout:     time.Second * 10,
-			WriteTimeout:    time.Second * 10,
-			ShutdownTimeout: time.Second * 10,
-			TokenTTL:        15000,
-			MainPath:        "/api/",
-		},
-		DB: DB{
-			URL:          "localhost:5432",
-			SchemaName:   "",
-			MaxOpenConns: 2,
-			MaxIdleConns: 2,
-		},
+func LoadConfig(filename string) (*viper.Viper, error) {
+	v := viper.New()
+
+	v.SetConfigName(filename)
+	v.AddConfigPath(".")
+	v.AutomaticEnv()
+	if err := v.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			return nil, errors.New("config file not found")
+		}
+		return nil, err
 	}
+
+	return v, nil
+}
+
+func ParseConfig(v *viper.Viper) (*Config, error) {
+	var c Config
+
+	err := v.Unmarshal(&c)
+	if err != nil {
+		log.Printf("unable to decode into struct, %v", err)
+		return nil, err
+	}
+
+	return &c, nil
 }
