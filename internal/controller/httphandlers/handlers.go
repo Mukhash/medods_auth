@@ -41,13 +41,18 @@ func (h *Handler) Auth(c echo.Context) error {
 
 	if err := json.NewDecoder(c.Request().Body).Decode(req); err != nil {
 		h.logger.Error(err.Error())
-		return c.JSON(http.StatusInternalServerError, err)
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	if !req.valid() {
+		h.logger.Error("invalid guid...")
+		return c.JSON(http.StatusBadRequest, "invalid guid")
 	}
 
 	tokens, err := h.AuthService.CreateSession(req.UUID)
 	if err != nil {
 		h.logger.Error(err.Error())
-		return c.JSON(http.StatusInternalServerError, err)
+		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 
 	cookieRefresh := http.Cookie{Name: "refreshToken", Value: tokens.Refresh, HttpOnly: true}
@@ -64,16 +69,24 @@ func (h *Handler) Refresh(c echo.Context) error {
 
 	if err := json.NewDecoder(c.Request().Body).Decode(req); err != nil {
 		h.logger.Error(err.Error())
-		return c.JSON(http.StatusInternalServerError, err)
+		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 
 	accessToken, err := h.AuthService.Refresh(req.RefreshToken)
 	if err != nil {
 		h.logger.Error(err.Error())
-		return c.JSON(http.StatusInternalServerError, err)
+		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 
 	res := RefreshResponse{AccessToken: accessToken}
 
 	return c.JSON(http.StatusCreated, res)
+}
+
+func (req *AuthRequest) valid() bool {
+	if req.UUID == "" {
+		return false
+	}
+
+	return true
 }

@@ -47,15 +47,15 @@ func New(ctx context.Context, config *config.Config, logger *zap.Logger, handler
 	{
 		passRoutes.POST("/auth", handler.Auth)
 		passRoutes.POST("/refresh", handler.Refresh)
-
 	}
 
 	logger.Info("try to run api")
 	return srv
 }
 
-func (srv Server) Start() {
+func (srv Server) Start(cancel func()) {
 	if err := srv.Echo.Start(srv.config.API.Address); err != nil {
-		srv.Logger.Fatal(err)
+		srv.Logger.Error(err)
+		cancel()
 	}
 }

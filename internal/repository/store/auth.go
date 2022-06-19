@@ -8,17 +8,20 @@ import (
 	"github.com/Mukhash/medods_auth/pkg/database/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Store struct {
 	Ctx    context.Context
+	Logger *zap.Logger
 	Client *mongodb.Client
 }
 
-func NewStore(ctx context.Context, client *mongodb.Client) *Store {
+func NewStore(ctx context.Context, logger *zap.Logger, client *mongodb.Client) *Store {
 	return &Store{
 		Ctx:    ctx,
+		Logger: logger,
 		Client: client,
 	}
 }
@@ -45,13 +48,12 @@ func (s *Store) InsertSession(user *models.User) error {
 	usersCollection := s.Client.DB.Collection("users")
 
 	hashedToken, err := bcrypt.GenerateFromPassword([]byte(user.RefreshToken), bcrypt.DefaultCost)
-	fmt.Println(string(hashedToken))
 	if err != nil {
 		return err
 	}
 
 	filter := bson.D{{"uuid", user.UUID}}
-	update := bson.D{{"$setOnInsert", bson.D{{"refreshToken", hashedToken}}}}
+	update := bson.D{{"$set", bson.D{{"refreshToken", hashedToken}}}}
 
 	upsert := true
 	opts := &options.UpdateOptions{Upsert: &upsert}
@@ -60,6 +62,7 @@ func (s *Store) InsertSession(user *models.User) error {
 	if err != nil {
 		return err
 	}
+	s.Logger.Info(fmt.Sprintf("MongoDB UpdateOne: guid %s", user.UUID))
 
 	return nil
 }
@@ -79,5 +82,7 @@ func (s *Store) InsertRefresh(user *models.User) error {
 	if err != nil {
 		return err
 	}
+	s.Logger.Info(fmt.Sprintf("MongoDB UpdateOne: guid %s", user.UUID))
+
 	return nil
 }

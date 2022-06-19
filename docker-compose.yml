@@ -7,5 +7,14 @@ services:
     labels:
       - "keep"
     ports:
-      - 27017:27017
+      - "27017:27017"
+    restart: always
+
+  auth-service:
+    build: ./
+    container_name: auth-medods
+    ports:
+      - "5000:5000"
+    links:
+      - mongodb-medods
     restart: always

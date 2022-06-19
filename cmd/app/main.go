@@ -2,7 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Mukhash/medods_auth/config"
 	handler "github.com/Mukhash/medods_auth/internal/controller/httphandlers"
@@ -29,8 +33,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("ParseConfig: %v", err)
 	}
-
-	ctx := context.Background()
+	fmt.Println(cfg.DB.URL)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	logger := zap.NewExample()
 
@@ -41,11 +45,29 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	repo := store.NewStore(ctx, mongoClient)
+	repo := store.NewStore(ctx, logger, mongoClient)
 	authService := service.New(repo, cfg, logger)
 	handler := handler.New(cfg, logger, authService)
 
 	srv := httpserver.New(ctx, cfg, logger, handler)
 
-	srv.Start()
+	go func(cancel func()) {
+		srv.Start(cancel)
+	}(cancel)
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case <-quit:
+		logger.Error("signal.Notify")
+	case <-ctx.Done():
+		logger.Error("ctx.Done")
+	}
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("server shutdown...")
+	}
+
+	logger.Info("Server Exited Properly")
 }

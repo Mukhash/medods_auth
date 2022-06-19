@@ -6,9 +6,9 @@ log:
 
 api:
   Address: ":5000"
-  ReadTimeout: 90
-  WriteTimeout: 120
-  ShutdownTimeout: 10
+  ReadTimeout: 10000000000
+  WriteTimeout: 10000000000
+  ShutdownTimeout: 10000000000
   AccessTokenTTL: 5000
   RefreshTokenTTL: 2592000
   MainPath: "/api"
@@ -18,4 +18,4 @@ jwt:
   RefreshSecret: "067bfb574b2995f5205cad66a0d135e34f056b5b28adba656b40922d92fc78ef95021f22a6d179adac5b67ec146b3e48ab882cd6cf336a72c4a5678e3bc9e350"
 
 db:
-  URL: "mongodb://localhost:27017"
+  URL: "mongodb://mongodb-medods:27017"

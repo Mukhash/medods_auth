@@ -6,5 +6,5 @@ import (
 
 type Claims struct {
 	jwt.StandardClaims
-	UUID string `bson:"_id"`
+	UUID string `bson:"uuid"`
 }

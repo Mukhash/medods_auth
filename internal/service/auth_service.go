@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 
@@ -66,11 +65,9 @@ func (a *authService) CreateSession(payload string) (*models.Token, error) {
 }
 
 func (a *authService) Refresh(refreshToken string) (string, error) {
-	asciiToken := base64.StdEncoding.EncodeToString([]byte(refreshToken))
-	fmt.Println(asciiToken)
-	claims, err := parseToken(asciiToken, []byte(a.cfg.JWT.RefreshSecret))
+	claims, err := parseToken(refreshToken, []byte(a.cfg.JWT.RefreshSecret))
 	if err != nil {
-		return "", errors.New(err.Error() + " parseToken")
+		return "", errors.New(err.Error())
 	}
 
 	user, err := a.repo.FindSession(claims.UUID)
@@ -78,8 +75,7 @@ func (a *authService) Refresh(refreshToken string) (string, error) {
 		return "", err
 	}
 
-	asciiRefresh := base64.StdEncoding.EncodeToString([]byte(user.RefreshToken))
-	if err = bcrypt.CompareHashAndPassword([]byte(asciiRefresh), []byte(refreshToken)); err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(user.RefreshToken), []byte(refreshToken)); err != nil {
 		return "", err
 	}
 
